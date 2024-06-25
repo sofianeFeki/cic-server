@@ -30,7 +30,7 @@ app.use(bodyParser.json({ limit: "2mb" }));
 app.use(cors());
 
 //routes middleware
-readdirSync("./routes").map((r) => {
+readdirSync("./Routes").map((r) => {
   const route = require(`./routes/${r}`);
   if (route && typeof route === "function") {
     app.use("/api", route);
@@ -44,6 +44,6 @@ readdirSync("./routes").map((r) => {
 });
 
 //port
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 8000;
 
 app.listen(port, () => console.log(`server is running on port ${port}`));
