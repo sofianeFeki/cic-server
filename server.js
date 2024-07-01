@@ -30,8 +30,8 @@ app.use(bodyParser.json({ limit: "2mb" }));
 app.use(cors());
 
 //routes middleware
-readdirSync("./routes").map((r) => {
-  const route = require(`./routes/${r}`);
+readdirSync("./Routes").map((r) => {
+  const route = require(`./Routes/${r}`);
   if (route && typeof route === "function") {
     app.use("/api", route);
     console.log(`Route ${r} loaded successfully.`);
