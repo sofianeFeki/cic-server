@@ -62,7 +62,7 @@ router.put(
   update
 );
 
-// router.post("/products", list);
+router.get("/products", list);
 
 // // rating
 // router.put("/product/star/:productId", authCheck, productStar);
