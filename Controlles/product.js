@@ -1,7 +1,7 @@
-const Product = require("../models/product");
-const User = require("../models/user");
-const slugify = require("slugify");
-const path = require("path");
+const Product = require('../models/product');
+const User = require('../models/user');
+const slugify = require('slugify');
+const path = require('path');
 
 exports.create = async (req, res) => {
   console.log(req.body); // Ensure you're receiving the correct data in the request body
@@ -14,20 +14,20 @@ exports.create = async (req, res) => {
       body.ficheTech = JSON.parse(body.ficheTech);
     }
 
-    let imagePath = "";
-    let pdfPath = "";
-    let videoPath = "";
+    let imagePath = '';
+    let pdfPath = '';
+    let videoPath = '';
 
     if (files.imageFile) {
-      imagePath = path.join("/uploads/images", files.imageFile[0].filename);
+      imagePath = path.join('/uploads/images', files.imageFile[0].filename);
     }
 
     if (files.pdf) {
-      pdfPath = path.join("/uploads/pdfs", files.pdf[0].filename);
+      pdfPath = path.join('/uploads/pdfs', files.pdf[0].filename);
     }
 
     if (files.video) {
-      videoPath = path.join("/uploads/videos", files.video[0].filename);
+      videoPath = path.join('/uploads/videos', files.video[0].filename);
     }
 
     const newProduct = new Product({
@@ -80,7 +80,7 @@ exports.read = async (req, res) => {
 
 const deleteFile = async (filePath) => {
   try {
-    await fs.unlink(path.join(__dirname, "..", filePath));
+    await fs.unlink(path.join(__dirname, '..', filePath));
   } catch (error) {
     console.error(`Error deleting file: ${filePath}`, error);
   }
@@ -95,12 +95,12 @@ exports.update = async (req, res) => {
     let updateData = { ...rest }; // Copy other fields from the request body
 
     // Parse ficheTech if it is a string
-    if (typeof ficheTech === "string") {
+    if (typeof ficheTech === 'string') {
       try {
         updateData.ficheTech = JSON.parse(ficheTech);
       } catch (error) {
-        console.error("Error parsing ficheTech:", error);
-        return res.status(400).send("Invalid ficheTech format");
+        console.error('Error parsing ficheTech:', error);
+        return res.status(400).send('Invalid ficheTech format');
       }
     }
 
@@ -148,7 +148,7 @@ exports.update = async (req, res) => {
       if (Image) {
         await deleteFile(Image);
       }
-      updateData.Image = ""; // Ensure Image field is set to empty
+      updateData.Image = ''; // Ensure Image field is set to empty
     }
 
     // If "Title" is provided, update the slug
@@ -165,24 +165,53 @@ exports.update = async (req, res) => {
 
     res.json(update);
   } catch (err) {
-    console.error("Product update error:", err);
-    return res.status(400).send("Product update failed");
+    console.error('Product update error:', err);
+    return res.status(400).send('Product update failed');
   }
 };
 
 // without pagination
 exports.list = async (req, res) => {
   try {
-    //const { sort, order, limit } = req.body;
-    const products = await Product.find({});
-    // .populate('category')
-    // .populate('subs')
-    // .sort([[sort, order]])
-    // .limit(limit)
-    // .exec();
-    res.json(products);
+    let {
+      page = 1,
+      itemsPerPage = 10,
+      sort = 'Dernières Nouveautés',
+    } = req.body;
+    page = parseInt(page, 10);
+    limit = parseInt(itemsPerPage, 10);
+
+    const skip = (page - 1) * limit;
+
+    let sortCriteria;
+    switch (sort) {
+      case 'Dernières Nouveautés':
+        sortCriteria = { createdAt: -1 }; // Sort by createdAt in descending order (latest first)
+        break;
+      case 'Meilleures ventes':
+        sortCriteria = { sold: -1 }; // Sort by sold in descending order (highest sold first)
+        break;
+      default:
+        sortCriteria = { createdAt: -1 }; // Default sorting if sort parameter is not recognized
+    }
+
+    const products = await Product.find({})
+      .sort(sortCriteria)
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    const totalProducts = await Product.countDocuments({});
+
+    res.json({
+      products,
+      totalPages: Math.ceil(totalProducts / limit),
+      totalProducts,
+      currentPage: page,
+    });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    res.status(500).json({ err: err.message });
   }
 };
 
