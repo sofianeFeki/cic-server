@@ -1,39 +1,39 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const morgan = require("morgan");
-const bodyParser = require("body-parser");
-const cors = require("cors");
-const { readdirSync } = require("fs");
-const path = require("path");
-require("dotenv").config();
+const express = require('express');
+const mongoose = require('mongoose');
+const morgan = require('morgan');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const { readdirSync } = require('fs');
+const path = require('path');
+require('dotenv').config();
 
 //app
 const app = express();
 
-app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 //db
 mongoose
   .connect(
-    "mongodb+srv://sofiene:20224267aa@komparcrm.bncygkp.mongodb.net/test"
+    'mongodb+srv://sofiene:20224267aa@komparcrm.bncygkp.mongodb.net/test'
   )
   .then(() => {
-    console.log("conected to mdb");
+    console.log('conected to mdb');
   })
   .catch((err) => {
     console.log(err.message);
   });
 
 //middlewares
-app.use(morgan("dev"));
-app.use(bodyParser.json({ limit: "2mb" }));
+app.use(morgan('dev'));
+app.use(bodyParser.json({ limit: '2mb' }));
 app.use(cors());
 
 //routes middleware
-readdirSync("./Routes").map((r) => {
+readdirSync('./Routes').map((r) => {
   const route = require(`./Routes/${r}`);
-  if (route && typeof route === "function") {
-    app.use("/api", route);
+  if (route && typeof route === 'function') {
+    app.use('/api', route);
     console.log(`Route ${r} loaded successfully.`);
   } else {
     console.error(
