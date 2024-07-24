@@ -48,29 +48,28 @@ exports.create = async (req, res) => {
   }
 };
 
-// exports.listAll = async (req, res) => {
-//   let products = await Product.find({})
-//     .limit(parseInt(req.params.count))
-//     .populate('category')
-//     .populate('subs')
-//     .sort([['createdAt', 'desc']])
-//     .exec();
-//   res.json(products);
-// };
+exports.remove = async (req, res) => {
+  try {
+    const { slug } = req.params;
 
-// exports.remove = async (req, res) => {
-//   try {
-//     const deleted = await Product.findOneAndRemove({
-//       slug: req.params.slug,
-//     }).exec();
-//     res.json(deleted);
-//   } catch (err) {
-//     console.log(err);
-//     res.status(400).json({
-//       err: err.message,
-//     });
-//   }
-// };
+    const deleted = await Product.findOneAndDelete({ slug }).exec();
+
+    if (!deleted) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    res.status(200).json({
+      message: 'Product successfully deleted',
+      product: deleted,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      message: 'An error occurred while deleting the product',
+      error: err.message,
+    });
+  }
+};
 
 exports.read = async (req, res) => {
   const read = await Product.findOne({ slug: req.params.slug }).exec();
@@ -170,6 +169,31 @@ exports.update = async (req, res) => {
   }
 };
 
+exports.searchProducts = async (req, res) => {
+  try {
+    const { query } = req.params;
+    console.log('Search query:', query); // Log the search query for debugging
+
+    // Search products by title, description, or category
+    const products = await Product.find({
+      $or: [
+        { Title: { $regex: query, $options: 'i' } },
+        // { Description: { $regex: query, $options: 'i' } },
+        // { Category: { $regex: query, $options: 'i' } },
+      ],
+    }).exec();
+
+    if (products.length > 0) {
+      res.json(products);
+    } else {
+      res.status(404).json({ message: 'No products found matching the query' });
+    }
+  } catch (err) {
+    console.error('Error searching products:', err);
+    res.status(500).json({ error: 'Failed to search products' });
+  }
+};
+
 // without pagination
 exports.list = async (req, res) => {
   try {
@@ -177,37 +201,105 @@ exports.list = async (req, res) => {
       page = 1,
       itemsPerPage = 10,
       sort = 'Dernières Nouveautés',
+      filters = {}, // Assuming filters is an object containing the filter criteria
     } = req.body;
-    page = parseInt(page, 10);
-    limit = parseInt(itemsPerPage, 10);
 
+    console.log('Received filters:', filters);
+
+    page = parseInt(page, 10);
+    const limit = parseInt(itemsPerPage, 10);
     const skip = (page - 1) * limit;
 
     let sortCriteria;
     switch (sort) {
       case 'Dernières Nouveautés':
-        sortCriteria = { createdAt: -1 }; // Sort by createdAt in descending order (latest first)
+        sortCriteria = { createdAt: -1 };
         break;
       case 'Meilleures ventes':
-        sortCriteria = { sold: -1 }; // Sort by sold in descending order (highest sold first)
+        sortCriteria = { sold: -1 };
         break;
       default:
-        sortCriteria = { createdAt: -1 }; // Default sorting if sort parameter is not recognized
+        sortCriteria = { createdAt: -1 };
     }
 
-    const products = await Product.find({})
+    // Build the query object based on filters
+    const query = {};
+
+    // Adjust the field names to match the structure of your filters object
+    if (filters.brand && filters.brand.length > 0) {
+      query.Brand = { $in: filters.brand };
+    }
+    if (filters.category && filters.category.length > 0) {
+      query.Category = { $in: filters.category };
+    }
+    if (filters.color && filters.color.length > 0) {
+      query.color = { $in: filters.color };
+    }
+
+    console.log('Query Object:', query);
+
+    // Fetch the products based on the query, sorting, and pagination
+    const products = await Product.find(query)
       .sort(sortCriteria)
       .skip(skip)
       .limit(limit)
       .exec();
 
-    const totalProducts = await Product.countDocuments({});
+    // Count the total number of products matching the query
+    const totalProducts = await Product.countDocuments(query);
 
     res.json({
       products,
       totalPages: Math.ceil(totalProducts / limit),
       totalProducts,
       currentPage: page,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ err: err.message });
+  }
+};
+
+exports.getProductsByCategory = async (req, res) => {
+  try {
+    const category = req.params.category;
+    console.log('Category:', category); // Log the category for debugging
+
+    // Find products matching the category
+    const products = await Product.find({ Category: category }).exec();
+
+    if (products.length > 0) {
+      res.json(products);
+    } else {
+      res.status(404).json({ message: 'No products found for this category' });
+    }
+  } catch (err) {
+    console.error('Error fetching products:', err);
+    res.status(500).json({ error: 'Failed to fetch products by category' });
+  }
+};
+exports.getNewArrivals = async (req, res) => {
+  try {
+    const products = await Product.find()
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .exec();
+
+    res.json({
+      products,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ err: err.message });
+  }
+};
+
+exports.getBestSellers = async (req, res) => {
+  try {
+    const products = await Product.find().sort({ sold: -1 }).limit(4).exec();
+
+    res.json({
+      products,
     });
   } catch (err) {
     console.error(err);
