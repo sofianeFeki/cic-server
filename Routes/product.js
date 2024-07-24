@@ -15,6 +15,10 @@ const {
   productStar,
   listRelated,
   searchFilters,
+  searchProducts,
+  getProductsByCategory,
+  getNewArrivals,
+  getBestSellers,
 } = require('../Controlles/product');
 
 //Update Routes to Handle File Uploads
@@ -50,7 +54,7 @@ router.post(
 );
 // router.get("/products/total", productsCount);
 // router.get("/products/:count", listAll);
-// router.delete("/product/:slug", authCheck, adminCheck, remove);
+router.delete('/product/:slug', remove);
 router.get('/product/:slug', read);
 router.put(
   '/admin/product-update/:slug',
@@ -63,6 +67,10 @@ router.put(
 );
 
 router.post('/products', list);
+router.get('/products/search/:query', searchProducts);
+router.get('/products/category/:category', getProductsByCategory);
+router.get('/products/newArrivals/:limit', getNewArrivals);
+router.get('/products/bestSellers/:limit', getBestSellers);
 
 // // rating
 // router.put("/product/star/:productId", authCheck, productStar);
