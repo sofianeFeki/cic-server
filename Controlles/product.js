@@ -93,6 +93,12 @@ exports.update = async (req, res) => {
     const { Title, imageFile, Image, ficheTech, ...rest } = req.body;
     let updateData = { ...rest }; // Copy other fields from the request body
 
+    // Include Title in updateData if provided
+    if (Title) {
+      updateData.Title = Title;
+      updateData.slug = slugify(Title);
+    }
+
     // Parse ficheTech if it is a string
     if (typeof ficheTech === 'string') {
       try {
@@ -110,7 +116,7 @@ exports.update = async (req, res) => {
 
         // Delete old image if it exists and is different from the new one
         if (Image && Image !== newImagePath) {
-          await deleteFile(Image);
+          await deleteFile(path.join(__dirname, '..', Image));
         }
 
         // Save new image path
@@ -122,7 +128,7 @@ exports.update = async (req, res) => {
 
         // Delete old pdf if it exists
         if (updateData.pdf && updateData.pdf !== newPdfPath) {
-          await deleteFile(updateData.pdf);
+          await deleteFile(path.join(__dirname, '..', updateData.pdf));
         }
 
         // Save new pdf path
@@ -134,7 +140,7 @@ exports.update = async (req, res) => {
 
         // Delete old video if it exists
         if (updateData.video && updateData.video !== newVideoPath) {
-          await deleteFile(updateData.video);
+          await deleteFile(path.join(__dirname, '..', updateData.video));
         }
 
         // Save new video path
@@ -142,17 +148,16 @@ exports.update = async (req, res) => {
       }
     }
 
-    // If the user resets the image (sets it to empty), delete the old image
-    if (imageFile === null) {
+    // If the user resets the image (sets it to empty or 'null'), delete the old image
+    if (
+      imageFile &&
+      (imageFile === 'null' ||
+        (Array.isArray(imageFile) && imageFile.includes('null')))
+    ) {
       if (Image) {
-        await deleteFile(Image);
+        await deleteFile(path.join(__dirname, '..', Image));
       }
       updateData.Image = ''; // Ensure Image field is set to empty
-    }
-
-    // If "Title" is provided, update the slug
-    if (Title) {
-      updateData.slug = slugify(Title);
     }
 
     // Perform the update operation
@@ -168,7 +173,6 @@ exports.update = async (req, res) => {
     return res.status(400).send('Product update failed');
   }
 };
-
 exports.searchProducts = async (req, res) => {
   try {
     const { query } = req.params;
@@ -235,7 +239,9 @@ exports.list = async (req, res) => {
     if (filters.color && filters.color.length > 0) {
       query.color = { $in: filters.color };
     }
-
+    if (filters.subCategory && filters.subCategory.length > 0) {
+      query.subCategory = { $in: filters.subCategory };
+    }
     console.log('Query Object:', query);
 
     // Fetch the products based on the query, sorting, and pagination
@@ -307,6 +313,65 @@ exports.getBestSellers = async (req, res) => {
   }
 };
 
+exports.getProductTitlesByCategories = async (req, res) => {
+  try {
+    const products = await Product.find({
+      Category: { $in: ['Imprimante', 'Photocopieur'] },
+    }).select('Title');
+    const productTitles = products.map((product) => product.Title);
+    res.json(productTitles);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch product titles' });
+  }
+};
+
+exports.getProductByTitle = async (req, res) => {
+  try {
+    const product = await Product.findOne({ Title: req.params.title });
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+    res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to fetch product data' });
+  }
+};
+exports.saveProductOfTheYear = async (req, res) => {
+  try {
+    const { title } = req.body;
+    const product = await Product.findOne({ Title: title });
+    if (!product) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    // Set all products' isProductOfTheYear to false
+    await Product.updateMany({}, { isProductOfTheYear: false });
+
+    // Set the selected product's isProductOfTheYear to true
+    product.isProductOfTheYear = true;
+    await product.save();
+
+    res.status(200).json({ message: 'Product of the Year saved successfully' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Failed to save Product of the Year' });
+  }
+};
+
+exports.getProductOfTheYear = async (req, res) => {
+  try {
+    const product = await Product.findOne({ isProductOfTheYear: true });
+    if (!product) {
+      return res.status(404).json({ error: 'Product of the Year not found' });
+    }
+    res.json(product);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ err: err.message });
+  }
+};
 //with pagination
 // exports.list = async (req, res) => {
 //   try {
