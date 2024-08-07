@@ -19,6 +19,10 @@ const {
   getProductsByCategory,
   getNewArrivals,
   getBestSellers,
+  getProductTitlesByCategories,
+  getProductByTitle,
+  saveProductOfTheYear,
+  getProductOfTheYear,
 } = require('../Controlles/product');
 
 //Update Routes to Handle File Uploads
@@ -71,6 +75,10 @@ router.get('/products/search/:query', searchProducts);
 router.get('/products/category/:category', getProductsByCategory);
 router.get('/products/newArrivals/:limit', getNewArrivals);
 router.get('/products/bestSellers/:limit', getBestSellers);
+router.get('/products/titles', getProductTitlesByCategories);
+router.get('/products/title/:title', getProductByTitle);
+router.post('/products/saveProductOfTheYear', saveProductOfTheYear);
+router.get('/products/productOfTheYear', getProductOfTheYear);
 
 // // rating
 // router.put("/product/star/:productId", authCheck, productStar);
