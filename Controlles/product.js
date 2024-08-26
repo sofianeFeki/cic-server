@@ -287,7 +287,7 @@ exports.getProductsByCategory = async (req, res) => {
 exports.getNewArrivals = async (req, res) => {
   try {
     const products = await Product.find()
-      .sort({ createdAt: -1 })
+      .sort({ updatedAt: -1 })
       .limit(5)
       .exec();
 
