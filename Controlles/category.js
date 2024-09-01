@@ -4,10 +4,13 @@ const Sub = require('../models/sub');
 const slugify = require('slugify');
 
 exports.create = async (req, res) => {
+  console.log(req.body, '==================>');
   try {
-    const { name } = req.body;
+    const { category } = req.body;
     // const category = await new Category({name, slug: slugify(name)}).save();
-    res.json(await new Category({ name, slug: slugify(name) }).save());
+    res.json(
+      await new Category({ name: category, slug: slugify(category) }).save()
+    );
   } catch (err) {
     console.log(err);
     res.status(400).send('Create category failed');
