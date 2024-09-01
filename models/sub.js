@@ -16,8 +16,9 @@ const subSchema = new mongoose.Schema(
       lowercase: true,
       index: true,
     },
-    parent: { type: ObjectId, ref: 'Category', required: true },
+    parent: { type: ObjectId, ref: 'Category', required: true }, // Correct reference
   },
   { timestamps: true }
 );
+
 module.exports = mongoose.model('Sub', subSchema);
