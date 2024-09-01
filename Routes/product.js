@@ -71,8 +71,8 @@ router.put(
 );
 
 router.post('/products', list);
-router.get('/products/search/:query', searchProducts);
-router.get('/products/category/:category', getProductsByCategory);
+router.post('/products/search/:query', searchProducts);
+router.post('/products/category/:category', getProductsByCategory);
 router.get('/products/newArrivals/:limit', getNewArrivals);
 router.get('/products/bestSellers/:limit', getBestSellers);
 router.get('/products/titles', getProductTitlesByCategories);
