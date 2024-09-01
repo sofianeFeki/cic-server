@@ -176,25 +176,87 @@ exports.update = async (req, res) => {
 exports.searchProducts = async (req, res) => {
   try {
     const { query } = req.params;
-    console.log('Search query:', query); // Log the search query for debugging
+    let {
+      page = 1,
+      itemsPerPage = 10,
+      sort = 'Dernières Nouveautés',
+      filters = {}, // Assuming filters is an object containing the filter criteria
+    } = req.body;
 
-    // Search products by title, description, or category
-    const products = await Product.find({
-      $or: [
-        { Title: { $regex: query, $options: 'i' } },
-        // { Description: { $regex: query, $options: 'i' } },
-        // { Category: { $regex: query, $options: 'i' } },
+    console.log('Search query:', query); // Log the search query for debugging
+    console.log('Received filters:', filters); // Log the filters for debugging
+
+    page = parseInt(page, 10);
+    const limit = parseInt(itemsPerPage, 10);
+    const skip = (page - 1) * limit;
+
+    let sortCriteria;
+    switch (sort) {
+      case 'Dernières Nouveautés':
+        sortCriteria = { createdAt: -1 };
+        break;
+      case 'Meilleures ventes':
+        sortCriteria = { sold: -1 };
+        break;
+      default:
+        sortCriteria = { createdAt: -1 };
+    }
+
+    // Build the query object based on filters and search query
+    const searchQuery = {
+      $and: [
+        {
+          $or: [
+            { Title: { $regex: query, $options: 'i' } },
+            // Uncomment to enable searching by description and category
+            // { Description: { $regex: query, $options: 'i' } },
+            // { Category: { $regex: query, $options: 'i' } },
+          ],
+        },
       ],
-    }).exec();
+    };
+
+    // Adjust the field names to match the structure of your filters object
+    if (filters.brand && filters.brand.length > 0) {
+      searchQuery.$and.push({ Brand: { $in: filters.brand } });
+    }
+    if (filters.category && filters.category.length > 0) {
+      searchQuery.$and.push({ Category: { $in: filters.category } });
+    }
+    if (filters.color && filters.color.length > 0) {
+      searchQuery.$and.push({ color: { $in: filters.color } });
+    }
+    if (filters.subCategory && filters.subCategory.length > 0) {
+      searchQuery.$and.push({ subCategory: { $in: filters.subCategory } });
+    }
+
+    console.log('Search Query Object:', searchQuery); // Log the final query object
+
+    // Fetch the products based on the search query, filters, sorting, and pagination
+    const products = await Product.find(searchQuery)
+      .sort(sortCriteria)
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    // Count the total number of products matching the search query
+    const totalProducts = await Product.countDocuments(searchQuery);
 
     if (products.length > 0) {
-      res.json(products);
+      res.json({
+        products,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+        currentPage: page,
+      });
     } else {
       res.status(404).json({ message: 'No products found matching the query' });
     }
   } catch (err) {
     console.error('Error searching products:', err);
-    res.status(500).json({ error: 'Failed to search products' });
+    res
+      .status(500)
+      .json({ error: 'Failed to search products', details: err.message });
   }
 };
 
@@ -268,22 +330,79 @@ exports.list = async (req, res) => {
 
 exports.getProductsByCategory = async (req, res) => {
   try {
-    const category = req.params.category;
-    console.log('Category:', category); // Log the category for debugging
+    let {
+      page = 1,
+      itemsPerPage = 10,
+      sort = 'Dernières Nouveautés',
+      filters = {},
+    } = req.body;
 
-    // Find products matching the category
-    const products = await Product.find({ Category: category }).exec();
+    page = parseInt(page, 10);
+    const limit = parseInt(itemsPerPage, 10);
+    const skip = (page - 1) * limit;
+
+    let sortCriteria;
+    switch (sort) {
+      case 'Dernières Nouveautés':
+        sortCriteria = { createdAt: -1 };
+        break;
+      case 'Meilleures ventes':
+        sortCriteria = { sold: -1 };
+        break;
+      default:
+        sortCriteria = { createdAt: -1 };
+    }
+
+    const category = req.params.category;
+    console.log('Category received:', category);
+
+    const query = { Category: category };
+
+    if (filters.brand && filters.brand.length > 0) {
+      query.Brand = { $in: filters.brand };
+    }
+    if (filters.color && filters.color.length > 0) {
+      query.color = { $in: filters.color };
+    }
+    if (filters.subCategory && filters.subCategory.length > 0) {
+      query.subCategory = { $in: filters.subCategory };
+    }
+
+    console.log('Final Query Object:', query);
+
+    const products = await Product.find(query)
+      .sort(sortCriteria)
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    const totalProducts = await Product.countDocuments(query);
 
     if (products.length > 0) {
-      res.json(products);
+      res.json({
+        products,
+        totalPages: Math.ceil(totalProducts / limit),
+        totalProducts,
+        currentPage: page,
+      });
     } else {
-      res.status(404).json({ message: 'No products found for this category' });
+      console.error('No products found for this category:', category);
+      res.status(404).json({
+        message: `No products found for category "${category}" with the applied filters`,
+        query,
+        filters,
+        sortCriteria,
+      });
     }
   } catch (err) {
     console.error('Error fetching products:', err);
-    res.status(500).json({ error: 'Failed to fetch products by category' });
+    res.status(500).json({
+      error: 'Failed to fetch products by category',
+      details: err.message,
+    });
   }
 };
+
 exports.getNewArrivals = async (req, res) => {
   try {
     const products = await Product.find()
