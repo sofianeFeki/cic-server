@@ -15,7 +15,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 //db
 mongoose
   .connect(
-    'mongodb+srv://sofiene:20224267aa@komparcrm.bncygkp.mongodb.net/test'
+    'mongodb+srv://sofienFeki:IPsZuLlngULq7FTO@komparcrm.a634yzc.mongodb.net/test'
   )
   .then(() => {
     console.log('conected to mdb');
